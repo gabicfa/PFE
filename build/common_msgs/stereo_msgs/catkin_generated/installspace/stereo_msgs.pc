@@ -1,0 +1,8 @@
+prefix=/home/gabicfa/catkin_ws/install
+
+Name: stereo_msgs
+Description: Description of stereo_msgs
+Version: 1.12.6
+Cflags: -I/home/gabicfa/catkin_ws/install/include
+Libs: -L/home/gabicfa/catkin_ws/install/lib 
+Requires: message_runtime sensor_msgs std_msgs

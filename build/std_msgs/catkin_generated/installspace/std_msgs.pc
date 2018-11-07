@@ -1,0 +1,8 @@
+prefix=/home/gabicfa/catkin_ws/install
+
+Name: std_msgs
+Description: Description of std_msgs
+Version: 0.5.11
+Cflags: -I/home/gabicfa/catkin_ws/install/include
+Libs: -L/home/gabicfa/catkin_ws/install/lib 
+Requires: message_runtime
