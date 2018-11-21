@@ -26,9 +26,9 @@ def veloc(vel):
 	global pub_Vel
 	pub_Vel.publish(vel)
 
-#import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-#simular uma matriz da Gabi
+# simular uma matriz da Gabi
 teleop = np.array([[0,0,0]])
 
 x = teleop[0,0]
@@ -60,6 +60,26 @@ for i in range (0,100): #tamanho da matriz trazida pela gabi
     add = np.array([x,y,z])
     teleop = np.vstack([teleop,add])
 
+teleop2 = [
+['0.00000', '0.00000', '0.00000'],
+['0.05407', '0.02661', '0.17428'],
+['0.09026', '0.01151', '0.68701'],
+['0.13697', '0.08482', '0.86850'],
+['0.11243', '0.13735', '0.92222'],
+['0.16584', '0.21857', '0.92815'],
+['0.20624', '0.28535', '0.93429'],
+['0.21782', '0.30349', '0.93668'],
+['0.27897', '0.51787', '0.94756'],
+['0.31485', '0.60339', '0.96150'],
+['0.28923', '0.59780', '0.97751'],
+['0.32953', '0.73743', '1.01614'],
+['0.30144', '0.73642', '1.04326'],
+['0.30902', '0.73612', '1.05880'],
+['0.31094', '0.71286', '1.07102'],
+['0.34452', '0.97391', '0.44883'],
+['0.35287', '1.06632', '0.03868'],]
+
+teleop = np.asarray(teleop2, dtype=np.float32)
 
 #Caminho a partir de distância mínima entre pontos
 
@@ -68,7 +88,7 @@ Pos_atual = teleop[-1]
 Home = teleop[0]
 
 
-delta_seguro = 20 # distância entre pontos considerada segura        
+delta_seguro = 0.001 # distância entre pontos considerada segura        
 
 caminho = np.array([Pos_atual])
 t = 0# apenas uma variável para não deixar o while entrar em loop infinito
@@ -76,6 +96,7 @@ t = 0# apenas uma variável para não deixar o while entrar em loop infinito
 #teleoporg.view('i8,i8,i8').sort(order=['f0', 'f1','f2'], axis=0)
 
 print(teleop)
+print('\n')
 # Caminho ótimo
 while not np.array_equal(Pos_atual,[0,0,0]):
     t+= 1
@@ -126,27 +147,26 @@ while not np.array_equal(Pos_atual,[0,0,0]):
 
 print(caminho)    
 
-if __name__ == '__main__':
-	rospy.init_node('drone')
-	pub_TakeOff = rospy.Publisher("bebop/takeoff", Empty, queue_size=10) #Define variaveis
-	pub_Land = rospy.Publisher("bebop/land", Empty, queue_size=10)
-	pub_Vel = rospy.Publisher("bebop/cmd_vel", Twist, queue_size=10)
-	rate = rospy.Rate(10) # 10hz
-	count = 0
-	estado = 0
-	while not rospy.is_shutdown():
-		for i in caminho:
-			x_linear = i[0]#
-			y_linear = i[1]#
-			z_linear = i[2]
+# if __name__ == '__main__':
+# 	rospy.init_node('drone')
+# 	pub_TakeOff = rospy.Publisher("bebop/takeoff", Empty, queue_size=10) #Define variaveis
+# 	pub_Land = rospy.Publisher("bebop/land", Empty, queue_size=10)
+# 	pub_Vel = rospy.Publisher("bebop/cmd_vel", Twist, queue_size=10)
+# 	rate = rospy.Rate(10) # 10hz
+# 	count = 0
+# 	estado = 0
+# 	while not rospy.is_shutdown():
+# 		for i in caminho:
+# 			x_linear = i[0]#
+# 			y_linear = i[1]#
+# 			z_linear = i[2]
 
-			x_angular = 0
-			y_angular = 0
-			z_angular = 0 
-
-			rospy.sleep(0.1)
-			vel = Twist(Vector3(x_linear, y_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
-			veloc(vel)
+# 			x_angular = 0
+# 			y_angular = 0
+# 			z_angular = 0 
+# 			rospy.sleep(0.1)
+# 			vel = Twist(Vector3(x_linear, y_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
+# 			veloc(vel)
 
 
 #x = np.linspace(0, 2, 100)

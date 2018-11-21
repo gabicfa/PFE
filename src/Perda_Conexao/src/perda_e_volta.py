@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import roslib; roslib.load_manifest('teleop_twist_keyboard')
 import rospy
 
@@ -69,6 +70,7 @@ speedBindings={
               }
 
 teleop = []
+
 def getKey():
         tty.setraw(sys.stdin.fileno())
         select.select([sys.stdin], [], [], 0)
@@ -89,37 +91,28 @@ def callback(msg):
     elif(p != teleop[len(teleop)-1]):
         teleop.append(p)
 
-
-def distancia(a, b, epsilon):
-        # supor sempre trabalhar com arrays do numpy
-        a =  np.array(a)
-        b = np.array(b)
-        return np.pow(a-b, 2) < epsilon
-
+# def distancia(a, b, epsilon):
+#         # supor sempre trabalhar com arrays do numpy
+#         a =  np.array(a)
+#         b = np.array(b)
+#         return np.sum(np.power(a-b, 2)) < epsilon
 
 def caminho_de_volta(tel):
-        print("oi0")
         #Caminho a partir de distância mínima entre pontos
-        teleop = np.array(tel)
-
-        #for t in tel:
-        #    add = np.array(t)
-        #    teleop = np.vstack([teleop,add])
+        teleop = np.asarray(tel, dtype=np.float32)
 
         Pos_atual = teleop[-1]
 
         Home = teleop[0]
 
-        delta_seguro = 0.1 # distância entre pontos considerada segura        
+        delta_seguro = 0.001 # distância entre pontos considerada segura        
 
         caminho = np.array([Pos_atual])
-        t = 0# apenas uma variável para não deixar o while entrar em loop infinito
-        #teleoporg = teleop.copy()
-        #teleoporg.view('i8,i8,i8').sort(order=['f0', 'f1','f2'], axis=0)
+        t = 0
 
         # Caminho ótimo
-        while not distancia(Pos_atual, [0,0,0], 0.1):
-                print("oi1")
+        # while not distancia(Pos_atual, [0,0,0], 0.1):
+        while not np.array_equal(Pos_atual,[0,0,0]): 
                 t+= 1
                 if t > 10000:
                         break
@@ -133,12 +126,10 @@ def caminho_de_volta(tel):
 
 
                 for i in range (0,len(teleop)):
-                        print("oi2")
                         #Para cada pondo, partindo da origem, testar se está dentro do raio de segurança
                         dist = math.sqrt((teleop[i,0] - Pos_atual[0])**2 + (teleop[i,1] - Pos_atual[1])**2 + (teleop[i,2] - Pos_atual[2])**2)
                         
                         if dist <= delta_seguro and primeiro_valor == 0: #primeiro valor dentro do raio de segurança
-                                print("oi3")
                                 menor_index = teleop[i]
                                 pontos_seguros.append(i)
                                 dist_prox_home = math.sqrt((teleop[i,0] - Home[0])**2 + (teleop[i,1] - Home[1])**2 + (teleop[i,2] - Home[2])**2)
@@ -147,17 +138,15 @@ def caminho_de_volta(tel):
                         
                         
                         elif dist <= delta_seguro and primeiro_valor == 1: #confere se o novo valor dentro do raio é mais perto ou não do home
-                                print("oi3")
                                 pontos_seguros.append(i)
                                 dist_home = math.sqrt((teleop[i,0] - Home[0])**2 + (teleop[i,1] - Home[1])**2 + (teleop[i,2] - Home[2])**2)
                                 
                                 if  dist_home < dist_prox_home:
-                                        print("oi4")
                                         dist_prox_home = dist_home
                                         prox = teleop[i]
 
-                if distancia(prox,Pos_atual, 0.1): #caso nenhum ponto seja mais proximo do home do que aquele que já está, vai ter que andar para trás
-                        print("oi4")
+                # if distancia(prox,Pos_atual, 0.1): #caso nenhum ponto seja mais proximo do home do que aquele que já está, vai ter que andar para trás
+                if np.array_equal(prox,Pos_atual): #caso nenhum ponto seja mais proximo do home do que aquele que já está, vai ter que andar para trás
                         prox = menor_index
                         apagar_valores = True
                         
@@ -165,17 +154,13 @@ def caminho_de_volta(tel):
                 Pos_atual = caminho[-1]
 
                 if apagar_valores == True:
-                        print("oi5")
                         for r in pontos_seguros:
                                 teleop[r] = [0,0,0]
-        print("oi6")
         print(caminho)  
         return caminho
 
 def volta(caminho):
-    print("comeco")
     rospy.init_node('drone')
-    print("fim")
     rate = rospy.Rate(10) # 10hz
     pub_Land = rospy.Publisher("bebop/land", Empty, queue_size=10)
     empty_msg = Empty()
@@ -246,7 +231,6 @@ if __name__=="__main__":
                         caminho = caminho_de_volta (teleop)
                         print(caminho)
                         volta(caminho)
-
                 else:
                         x = 0
                         y = 0
