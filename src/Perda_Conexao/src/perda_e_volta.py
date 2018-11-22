@@ -4,14 +4,19 @@
 import roslib; roslib.load_manifest('teleop_twist_keyboard')
 import rospy
 
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Vector3
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String
 
 import sys, select, termios, tty
 
 import numpy as np
 import math
+
+pub = rospy.Publisher('bebop/cmd_vel', Twist, queue_size = 1)
+pub2 = rospy.Publisher('bebop/takeoff', Empty, queue_size = 1)
+pub3 = rospy.Publisher('bebop/land', Empty, queue_size = 1)
+empty_msg = Empty()
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -81,6 +86,10 @@ def getKey():
 def vels(speed,turn):
         return "currently:\tspeed %s\tturn %s " % (speed,turn)
 
+def veloc(vel):
+	global pub
+	pub.publish(vel)
+
 def callback(msg):
     x = "%.5f" % msg.pose.pose.position.x
     y = "%.5f" % msg.pose.pose.position.y
@@ -91,12 +100,6 @@ def callback(msg):
     elif(p != teleop[len(teleop)-1]):
         teleop.append(p)
 
-# def distancia(a, b, epsilon):
-#         # supor sempre trabalhar com arrays do numpy
-#         a =  np.array(a)
-#         b = np.array(b)
-#         return np.sum(np.power(a-b, 2)) < epsilon
-
 def caminho_de_volta(tel):
         #Caminho a partir de distância mínima entre pontos
         teleop = np.asarray(tel, dtype=np.float32)
@@ -105,14 +108,14 @@ def caminho_de_volta(tel):
 
         Home = teleop[0]
 
-        delta_seguro = 0.001 # distância entre pontos considerada segura        
+        delta_seguro = 1 # distância entre pontos considerada segura        
 
         caminho = np.array([Pos_atual])
         t = 0
 
         # Caminho ótimo
         # while not distancia(Pos_atual, [0,0,0], 0.1):
-        while not np.array_equal(Pos_atual,[0,0,0]): 
+        while not np.array_equal(Pos_atual,Home): 
                 t+= 1
                 if t > 10000:
                         break
@@ -147,7 +150,7 @@ def caminho_de_volta(tel):
 
                 # if distancia(prox,Pos_atual, 0.1): #caso nenhum ponto seja mais proximo do home do que aquele que já está, vai ter que andar para trás
                 if np.array_equal(prox,Pos_atual): #caso nenhum ponto seja mais proximo do home do que aquele que já está, vai ter que andar para trás
-                        prox = menor_index
+                        # prox = menor_index
                         apagar_valores = True
                         
                 caminho = np.vstack([caminho,prox])
@@ -155,39 +158,32 @@ def caminho_de_volta(tel):
 
                 if apagar_valores == True:
                         for r in pontos_seguros:
-                                teleop[r] = [0,0,0]
-        print(caminho)  
+                                teleop[r] = Home
         return caminho
 
 def volta(caminho):
-    rospy.init_node('drone')
-    rate = rospy.Rate(10) # 10hz
-    pub_Land = rospy.Publisher("bebop/land", Empty, queue_size=10)
-    empty_msg = Empty()
-    while not rospy.is_shutdown():
-        for i in caminho:
-            x_linear = i[0]#
-            y_linear = i[1]#
-            z_linear = i[2]
+        caminho.tolist()
+        land = False
+        while not land:
+                for i in range(len(caminho)-1):
+                        x_linear = caminho[i+1][0]-caminho[i][0]
+                        y_linear = caminho[i+1][1]-caminho[i][1]
+                        z_linear = caminho[i+1][2]-caminho[i][2]
 
-            x_angular = 0
-            y_angular = 0
-            z_angular = 0 
-
-            rospy.sleep(0.1)
-            vel = Twist(Vector3(x_linear, y_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
-            veloc(vel)
-        pub_Land.publish(empty_msg)
+                        x_angular = 0
+                        y_angular = 0
+                        z_angular = 0 
+                        rospy.sleep(1)
+                        vel = Twist(Vector3(x_linear, y_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
+                        print(vel)
+                        veloc(vel)
+                land = True
+        pub3.publish(empty_msg)
         
 if __name__=="__main__":
-    settings = termios.tcgetattr(sys.stdin)
-        
-    pub = rospy.Publisher('bebop/cmd_vel', Twist, queue_size = 1)
-    rospy.init_node('check_odometry')
-    pub2 = rospy.Publisher('bebop/takeoff', Empty, queue_size = 1)
-    pub3 = rospy.Publisher('bebop/land', Empty, queue_size = 1)
-    empty_msg = Empty()
 
+    settings = termios.tcgetattr(sys.stdin)
+    rospy.init_node('check_odometry')
     speed = rospy.get_param("~/speed", 0.5)
     turn = rospy.get_param("~/turn", 1.0)
     
