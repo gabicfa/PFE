@@ -75,6 +75,7 @@ speedBindings={
               }
 
 teleop = []
+# global p = []
 
 def getKey():
         tty.setraw(sys.stdin.fileno())
@@ -94,7 +95,9 @@ def callback(msg):
     x = "%.5f" % msg.pose.pose.position.x
     y = "%.5f" % msg.pose.pose.position.y
     z = "%.5f" % msg.pose.pose.position.z
+    global p 
     p = [x, y, z]
+#     print(p)
     if(len(teleop)==0):
         teleop.append(p)
     elif(p != teleop[len(teleop)-1]):
@@ -165,27 +168,49 @@ def volta(caminho):
         caminho.tolist()
         land = False
         while not land:
-                for i in range(len(caminho)-1):
-                        x_linear = caminho[i+1][0]-caminho[i][0]
-                        y_linear = caminho[i+1][1]-caminho[i][1]
-                        z_linear = caminho[i+1][2]-caminho[i][2]
+                for i in range(1, len(caminho)):
+                        print("Ponto: " + str(i))
+                        delta_x = float(caminho[i][0]) - float(p[0])
+                        delta_y = float(caminho[i][1]) - float(p[1])
+                        delta_z = float(caminho[i][2]) - float(p[2])
+                        print(delta_x)
+                        print(delta_y)
+                        print(delta_z)
 
-                        x_angular = 0
-                        y_angular = 0
-                        z_angular = 0 
-                        rospy.sleep(1)
-                        vel = Twist(Vector3(x_linear, y_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
-                        print(vel)
-                        veloc(vel)
+                        while(abs(delta_x)>0.1 or abs(delta_y)>0.1 or abs(delta_z)>0.1):
+                                print("Posicao q estou: " + str(p[0]) + ", " + str(p[1]) + ", " + str(p[2]))
+                                print("Velocidadede: " + str(delta_x) + ", " + str(delta_y) + ", " + str(delta_z))
+                                print("Posicao q quero ir: " + str(caminho[i][0]) + ", " + str(caminho[i][1]) + ", " + str(caminho[i][2]))
+                                print ('\n')
+                                x_angular = 0
+                                y_angular = 0
+                                z_angular = 0 
+                                vel = Twist(Vector3(-delta_y, delta_x, delta_z), Vector3(x_angular, y_angular, z_angular))
+                                veloc(vel)
+                                rospy.sleep(1)
+                                if(abs(delta_x)>0.1):
+                                        delta_x = float(caminho[i][0]) - float(p[0])
+                                
+                                if(abs(delta_y)>0.1):
+                                        delta_y = float(caminho[i][1]) - float(p[1])
+                                
+                                if(abs(delta_z)>0.1):
+                                        delta_z = float(caminho[i][2]) - float(p[2])
+                                
+                                
+                        
+                                
                 land = True
         pub3.publish(empty_msg)
-        
+
+
 if __name__=="__main__":
 
     settings = termios.tcgetattr(sys.stdin)
     rospy.init_node('check_odometry')
     speed = rospy.get_param("~/speed", 0.5)
     turn = rospy.get_param("~/turn", 1.0)
+    odom_sub = rospy.Subscriber('/bebop/odom', Odometry, callback)
     
     x = 0
     y = 0
@@ -198,7 +223,6 @@ if __name__=="__main__":
         print (msg)
         print (vels(speed,turn))
         while(connection):
-                odom_sub = rospy.Subscriber('/bebop/odom', Odometry, callback)
                 key = getKey()
                 if key in moveBindings.keys():
                         x = moveBindings[key][0]
