@@ -25,22 +25,17 @@ Moving around:
    u    i    o
    j    k    l
    m    ,    .
-
 For Holonomic mode (strafing), hold down the shift key:
 ---------------------------
    U    I    O
    J    K    L
    M    <    >
-
 t : up (+z)
 b : down (-z)
-
 anything else : stop
-
 q/z : increase/decrease max speeds by 10%
 w/x : increase/decrease only linear speed by 10%
 e/c : increase/decrease only angular speed by 10%
-
 CTRL-C to quit
 """
 
@@ -75,33 +70,41 @@ speedBindings={
               }
 
 teleop = []
-# global p = []
 
 def getKey():
-        tty.setraw(sys.stdin.fileno())
-        select.select([sys.stdin], [], [], 0)
-        key = sys.stdin.read(1)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-        return key
+    tty.setraw(sys.stdin.fileno())
+    select.select([sys.stdin], [], [], 0)
+    key = sys.stdin.read(1)
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    return key
 
 def vels(speed,turn):
-        return "currently:\tspeed %s\tturn %s " % (speed,turn)
+	return "currently:\tspeed %s\tturn %s " % (speed,turn)
 
 def veloc(vel):
 	global pub
+	
 	pub.publish(vel)
 
 def callback(msg):
     x = "%.5f" % msg.pose.pose.position.x
     y = "%.5f" % msg.pose.pose.position.y
     z = "%.5f" % msg.pose.pose.position.z
-    global p 
     p = [x, y, z]
-#     print(p)
     if(len(teleop)==0):
         teleop.append(p)
     elif(p != teleop[len(teleop)-1]):
         teleop.append(p)
+
+def callback2(msg):
+    x = "%.5f" % msg.pose.pose.position.x
+    y = "%.5f" % msg.pose.pose.position.y
+    z = "%.5f" % msg.pose.pose.position.z
+    print("callback2 x")
+    print(x)
+    print(y)
+    print(z)
+    pos = [x, y, z]
 
 def caminho_de_volta(tel):
         #Caminho a partir de distância mínima entre pontos
@@ -167,46 +170,46 @@ def caminho_de_volta(tel):
 def volta(caminho):
         caminho.tolist()
         land = False
+        margem = 0.9
+        rate = rospy.Rate(3)
+        pos=caminho[0]
+        #print(caminho[-1]-caminho[0])
+        valor=pos
         while not land:
-                for i in range(1, len(caminho)):
-                        print("Ponto: " + str(i) + "/" +str(len(caminho)))
-                        delta_x = float(caminho[i][0]) - float(p[0])
-                        delta_y = float(caminho[i][1]) - float(p[1])
-                        # delta_z = float(caminho[i][2]) - float(p[2])
-                        print(delta_x)
-                        print(delta_y)
-                        #print(delta_z)
+            for i in range(len(caminho)-1):
+               
+                while((caminho[i+1][0] < pos[0]-margem) or (caminho[i+1][0] > pos[0]+margem) or (caminho[i+1][1] < pos[1]-margem) or (caminho[i+1][1] > pos[1]+margem) or (caminho[i+1][2] < pos[2]-margem) or (caminho[i+1][2] > pos[2]+margem)):
+                	
+                	pos[0] = float(teleop[-1][0])
+                	pos[1] = float(teleop[-1][1])
+                	pos[2] = float(teleop[-1][2])
 
-                        while(abs(delta_x)>0.1 or abs(delta_y)>0.1 ):#or abs(delta_z)>2):
-                                print("Ponto: " + str(i) + "/" +str(len(caminho)))
-                                print("Posicao q estou: " + str(p[0]) + ", " + str(p[1]))# + ", " + str(p[2]))
-                                print("Velocidadede: " + str(delta_x) + ", " + str(delta_y))# + ", " + str(delta_z))
-                                print("Posicao q quero ir: " + str(caminho[i][0]) + ", " + str(caminho[i][1]))# + ", " + str(caminho[i][2]))
-                                print ('\n')
-                                x_angular = 0
-                                y_angular = 0
-                                z_angular = 0 
-                                vel = Twist(Vector3(delta_x, delta_y, 0), Vector3(x_angular, y_angular, z_angular))
-                                # vel = Twist(Vector3(delta_x, delta_y, delta_z), Vector3(x_angular, y_angular, z_angular))
+                	x_linear = (caminho[i+1][0]-pos[0])*0.1
+                	y_linear = (caminho[i+1][1]-pos[1])*0.1
+                	z_linear = (caminho[i+1][2]-pos[2])*0.1
 
-                                veloc(vel)
-                                rospy.sleep(1)
-                                # if(abs(delta_x)>0.1):
-                                delta_x = float(caminho[i][0]) - float(p[0])
-                                
-                                # if(abs(delta_y)>0.1):
-                                delta_y = float(caminho[i][1]) - float(p[1])
-                                
-                                # if(abs(delta_z)>0.1):
-                                # delta_z = float(caminho[i][2]) - float(p[2])
-                                
-                                
-                        
-                                
-                land = True
-        pub3.publish(empty_msg)
+                	x_angular = 0
+                	y_angular = 0
+                	z_angular = 0
 
+                	 
 
+                	vel = Twist(Vector3(-y_linear, x_linear, z_linear), Vector3(x_angular, y_angular, z_angular))
+
+                	veloc(vel)
+                	rate.sleep()
+           
+                	if (float(teleop[-1][0]) < pos[0]-0.5 or float(teleop[-1][0]) > pos[0]+0.5) or (float(teleop[-1][1]) < pos[1]-0.5 or float(teleop[-1][1]) > pos[1]+0.5) or (float(teleop[-1][2]) < pos[2]-0.5 or float(teleop[-1][2]) > pos[2]+0.5):
+                		valor=pos
+                		print("Posicao q estou: " + str(pos[0]) + ", " + str(pos[1]) + ", " + str(pos[2]))
+                		# print(pos)
+                		# print(caminho[i+1])
+                		print("Posicao q quero ir: " + str(caminho[i+1][0]) + ", " + str(caminho[i+1][1]) + ", " + str(caminho[i+1][2]))
+                		print("velocidades: " + str(x_linear) + ", " + str(y_linear) + ", " + str(z_linear))
+                
+            land = True
+            pub3.publish(empty_msg)
+        
 if __name__=="__main__":
 
     settings = termios.tcgetattr(sys.stdin)
@@ -226,6 +229,7 @@ if __name__=="__main__":
         print (msg)
         print (vels(speed,turn))
         while(connection):
+                
                 key = getKey()
                 if key in moveBindings.keys():
                         x = moveBindings[key][0]
@@ -235,7 +239,6 @@ if __name__=="__main__":
                 elif key in speedBindings.keys():
                         speed = speed * speedBindings[key][0]
                         turn = turn * speedBindings[key][1]
-
                         print (vels(speed,turn))
                         if (status == 14):
                                 print (msg)
@@ -244,16 +247,12 @@ if __name__=="__main__":
                         pub2.publish(empty_msg)
                 elif key == '2':
                         pub3.publish(empty_msg)
-                elif key =='a':
+                elif key == 'a':
                         connection = False
-                        print("Perda de Conexao")
-                        print("teleop")
-                        for t in teleop:
-                            print(t)
-                        print("caminho")
                         caminho = caminho_de_volta (teleop)
-                        print(caminho)
-                        volta(caminho)
+                        #print(teleop)
+                        #print(caminho)
+                        volta(caminho[:-1])
                 else:
                         x = 0
                         y = 0
@@ -277,4 +276,4 @@ if __name__=="__main__":
             twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
             pub.publish(twist)
 
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
